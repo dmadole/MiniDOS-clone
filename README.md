@@ -3,25 +3,25 @@
 minfo is an Elf/OS utility for kernel 0.4.0 or later that displays information about memory usage on the machine. Output might look as follows:
 
 ```MEMORY:
-```Frst  Base  Heap  Last  Size  Free
-```----  ----  ----  ----  ----  ----
-```0000  2000  76FD  7FFF  8000  56FE
-```
-```HEAP:
-```Addr  Size  Flags        References
-```----  ----  -----------  ----------
-```7700  00D1  46 .N...PA.  (Disk) "Hydro"
-```77D4  0029  01 .......F
-```7800  0205  46 .N...PA.  (File) "Turbo"
-```7A08  01F5  01 .......F
-```7C00  013F  46 .N...PA.  (Output,Input) "Nitro"
-```7D42  01BE  01 .......F
-```7F03  00FC  06 .....PA.  (Stack)
-```
-```STACK:
-```Frst  Curr  Last  Size  Free  Low
-```----  ----  ----  ----  ----  ----
-```7F03  7FFA  7FFE  00FC  00F7  00C0
+Frst  Base  Heap  Last  Size  Free
+----  ----  ----  ----  ----  ----
+0000  2000  76FD  7FFF  8000  56FE
+
+HEAP:
+Addr  Size  Flags        References
+----  ----  -----------  ----------
+7700  00D1  46 .N...PA.  (Disk) "Hydro"
+77D4  0029  01 .......F
+7800  0205  46 .N...PA.  (File) "Turbo"
+7A08  01F5  01 .......F
+7C00  013F  46 .N...PA.  (Output,Input) "Nitro"
+7D42  01BE  01 .......F
+7F03  00FC  06 .....PA.  (Stack)
+
+STACK:
+Frst  Curr  Last  Size  Free  Low
+----  ----  ----  ----  ----  ----
+7F03  7FFA  7FFE  00FC  00F7  00C0```
 
 In the MEMORY section:
 * Frst (First) is the lowest RAM address
