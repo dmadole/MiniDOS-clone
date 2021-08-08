@@ -40,9 +40,9 @@ start:     org     2000h
            ; Build information
 
            db      8+80h              ; month
-           db      7                  ; day
+           db      8                  ; day
            dw      2021               ; year
-           dw      1                  ; build
+           dw      2                  ; build
 
            db      'See github.com/dmadole/Elfos-minfo for more info',0
 
