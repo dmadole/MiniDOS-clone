@@ -427,7 +427,7 @@ hooksave:  ghi     r7
            str     rf
            inc     rf
 
-           br      hookname
+           lbr     hookname
 
 hook2nd:   ldi     ','
            str     rf
@@ -503,7 +503,7 @@ findzer:   dec     r9
 catname:   lda     r9
            str     rf
            inc     rf
-           bnz     catname
+           lbnz    catname
 
            dec     rf
 
@@ -709,9 +709,9 @@ lowmore:   glo     ra                  ; compare ra.0 to m(ra)
            inc     rc
 
 lowmark:   glo     rc                  ; have we filled all free space?
-           bnz     lowwrit
+           lbnz    lowwrit
            ghi     rc
-           bz      lowstop
+           lbz     lowstop
 
 lowwrit:   glo     ra                  ; fill free stack byte
            str     ra
@@ -728,7 +728,7 @@ lowstop:   sex     r2                  ; put back to stack pointer
            ghi     rd
            smbi    0
 
-           bdf     lowprnt             ; if yes, then print low water mark
+           lbdf    lowprnt             ; if yes, then print low water mark
 
            ldi     high lownone        ; no, so wasn't initialized
            phi     ra
@@ -736,7 +736,7 @@ lowstop:   sex     r2                  ; put back to stack pointer
            plo     ra
 
 lowcopy:   lda     ra                  ; copy string into buffer
-           bz      prstack
+           lbz     prstack
            str     rf
            inc     rf
            lbr     lowcopy
