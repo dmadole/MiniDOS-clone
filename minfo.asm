@@ -40,9 +40,9 @@ start:     org     2000h
            ; Build information
 
            db      8+80h              ; month
-           db      7                  ; day
+           db      8                  ; day
            dw      2021               ; year
-           dw      1                  ; build
+           dw      2                  ; build
 
            db      'See github.com/dmadole/Elfos-minfo for more info',0
 
@@ -728,7 +728,7 @@ lowstop:   sex     r2                  ; put back to stack pointer
            ghi     rd
            smbi    0
 
-           bdf     lowprnt             ; if yes, then print low water mark
+           lbdf    lowprnt             ; if yes, then print low water mark
 
            ldi     high lownone        ; no, so wasn't initialized
            phi     ra
@@ -736,7 +736,7 @@ lowstop:   sex     r2                  ; put back to stack pointer
            plo     ra
 
 lowcopy:   lda     ra                  ; copy string into buffer
-           bz      prstack
+           lbz     prstack
            str     rf
            inc     rf
            lbr     lowcopy
