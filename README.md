@@ -21,7 +21,8 @@ Addr  Size  Flags        References
 STACK:
 Frst  Curr  Last  Size  Free  Low
 ----  ----  ----  ----  ----  ----
-7F03  7FFA  7FFE  00FC  00F7  00C0```
+7F03  7FFA  7FFE  00FC  00F7  00C0
+```
 
 In the MEMORY section:
 * Frst (First) is the lowest RAM address
