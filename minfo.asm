@@ -39,10 +39,10 @@ start:     org     2000h
 
            ; Build information
 
-           db      8+80h              ; month
-           db      8                  ; day
-           dw      2021               ; year
-           dw      2                  ; build
+           db      4+80h              ; month
+           db      4                  ; day
+           dw      2022               ; year
+           dw      4                  ; build
 
            db      'See github.com/dmadole/Elfos-minfo for more info',0
 
@@ -57,164 +57,17 @@ main:      ldi     high k_ver         ; pointer to installed kernel version
            plo     rd
 
            lda     rd                 ; if major is non-zero then good
-           lbnz    memshow
+           lbnz    heapshow
 
            lda     rd                 ; if minor is 4 or more then good
            smi     4
-           lbdf    memshow
+           lbdf    heapshow
 
            sep     scall              ; quit with error message
            dw      o_inmsg
            db      'ERROR: Needs kernel version 0.4.0 or higher',13,10,0
            sep     sret
 
-
-           ; Output general memory info
-
-memshow:   sep     scall
-           dw      o_inmsg
-           db      'MEMORY:',13,10
-           db      'Frst  Base  Heap  Last  Size  Free',13,10
-           db      '----  ----  ----  ----  ----  ----',13,10,0
-
-           sep     scall
-           dw      f_freemem
-
-           glo     rf
-           plo     r7
-           ghi     rf
-           phi     r7
-
-           ldi     high buffer
-           phi     rf
-           ldi     low buffer
-           plo     rf
-
-           ; First address, hardcoded for now
-
-           ldi     '0'
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ldi     ' '
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ; Base address, hardcoded for now
-
-           ldi     '2'
-           str     rf
-           inc     rf
-
-           ldi     '0'
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ldi     ' '
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ; Heap address from k_heap
-
-           ldi     high k_heap
-           phi     r8
-           ldi     low k_heap
-           plo     r8
-
-           lda     r8
-           phi     rd
-           ldn     r8
-           plo     rd
-
-           sep     scall               ; output in hex
-           dw      f_hexout4
-
-           ldi     ' '
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ; Last address from f_freemem
-
-           ghi     r7
-           phi     rd
-           glo     r7
-           plo     rd
-
-           sep     scall               ; output in hex
-           dw      f_hexout4
-
-           ldi     ' '
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ; Size based on f_freemem with fixed zero
-
-           ghi     r7
-           phi     rd
-           glo     r7
-           plo     rd
-
-           inc     rd
-
-           sep     scall               ; output in hex
-           dw      f_hexout4
-
-           ldi     ' '
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-           ; Free is heap minus base of 2000
-
-           dec     r8
-           lda     r8
-           smi     020h
-           phi     rd
-           ldn     r8
-           plo     rd
-
-           inc     rd
-
-           sep     scall               ; output in hex
-           dw      f_hexout4
-
-           ldi     13
-           str     rf
-           inc     rf
-
-           ldi     10
-           str     rf
-           inc     rf
-
-           ldi     0
-           str     rf
-
-           ldi     high buffer
-           phi     rf
-           ldi     low buffer
-           plo     rf
-
-           sep     scall
-           dw      o_msg
 
            ; Show heap
 
@@ -247,6 +100,10 @@ heapshow:  ldi     high stdret+1
 
            sex     r2
 
+           ldi     0
+           plo     rc
+           phi     rc
+
            sep     scall
            dw      o_inmsg
            db      13,10
@@ -274,17 +131,35 @@ heaploop:  ldi     high buffer
 
            lda     r7                  ; get flags byte
            plo     r9
-           lbz     heapdone
+           lbz     memshow
 
            lda     r7                  ; get length, advance to address
            phi     r8
            lda     r7
            plo     r8
 
+           ; Add up size of all free blocks
+
+           glo     r9
+           ani     1
+           lbz     notfree
+
+           glo     r8
+           str     r2
+           glo     rc
+           add
+           plo     rc
+
+           ghi     r8
+           str     r2
+           ghi     rc
+           adc
+           phi     rc
+
 
            ; Output address of block
 
-           ghi     r7                  ; get address of block
+notfree:   ghi     r7                  ; get address of block
            phi     rd
            glo     r7
            plo     rd
@@ -554,11 +429,153 @@ heapout:   ldi     13
            lbr     heaploop
 
 
-heapdone:  sep     scall
+           ; Output general memory info
+
+memshow:   sep     scall
+           dw      o_inmsg
+           db      13,10
+           db      'MEMORY:',13,10
+           db      'Base  Heap  Last  Size  Prog  Free',13,10
+           db      '----  ----  ----  ----  ----  ----',13,10,0
+
+           dec     r7
+
+           ldi     high buffer
+           phi     rf
+           ldi     low buffer
+           plo     rf
+
+           ; Base address, hardcoded for now
+
+           ldi     '2'
+           str     rf
+           inc     rf
+           ldi     '0'
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+           ldi     ' '
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+           ; Heap address from k_heap
+
+           ldi     high k_heap
+           phi     r8
+           ldi     low k_heap
+           plo     r8
+
+           lda     r8
+           phi     rd
+           ldn     r8
+           plo     rd
+           dec     r8
+
+           sep     scall               ; output in hex
+           dw      f_hexout4
+
+           ldi     ' '
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+           ; Last address from heap scan
+
+           ghi     r7
+           phi     rd
+           glo     r7
+           plo     rd
+
+           sep     scall               ; output in hex
+           dw      f_hexout4
+
+           ldi     ' '
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+           ; Size based on f_freemem with fixed zero
+
+           ghi     r7
+           phi     rd
+           glo     r7
+           plo     rd
+
+           inc     rd
+
+           sep     scall               ; output in hex
+           dw      f_hexout4
+
+           ldi     ' '
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+           ; Prog is heap minus base of 2000
+
+           lda     r8
+           smi     020h
+           phi     rd
+           ldn     r8
+           plo     rd
+           dec     r8
+
+           inc     rd
+
+           sep     scall               ; output in hex
+           dw      f_hexout4
+
+           ldi     ' '
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+           ; Free heap memory from scan
+
+           ghi     rc
+           phi     rd
+           glo     rc
+           plo     rd
+
+           sep     scall               ; output in hex
+           dw      f_hexout4
+
+           ldi     13
+           str     rf
+           inc     rf
+
+           ldi     10
+           str     rf
+           inc     rf
+
+           ldi     0
+           str     rf
+
+           ldi     high buffer
+           phi     rf
+           ldi     low buffer
+           plo     rf
+
+           sep     scall
+           dw      o_msg
+
+           ; Show stack info
+
+           sep     scall
            dw      o_inmsg
            db      13,10
            db      'STACK:',13,10
-           db      'Frst  Curr  Last  Size  Free  Low',13,10
+           db      'Frst  Curr  Last  Size  Low   Free',13,10
            db      '----  ----  ----  ----  ----  ----',13,10,0
 
            ldi     high buffer
@@ -653,32 +670,20 @@ heapdone:  sep     scall
            str     rf
            inc     rf
 
-           ; Output stack free space
+           ; Output low water mark
 
            glo     r8                  ; get free space in stack
            str     r2
            glo     r2
            sm
+           plo     rb
            plo     rc
-           plo     rd
            ghi     r8
            str     r2
            ghi     r2
            smb
+           phi     rb
            phi     rc
-           phi     rd
-
-           sep     scall               ; output in hex
-           dw      f_hexout4
-
-           ldi     32                  ; follow with two spaces
-           str     rf
-           inc     rf
-           str     rf
-           inc     rf
-
-
-           ; Output low water mark
 
            ldi     255                 ; count of untouched space to -1
            plo     rd
@@ -730,27 +735,41 @@ lowstop:   sex     r2                  ; put back to stack pointer
 
            lbdf    lowprnt             ; if yes, then print low water mark
 
-           ldi     high lownone        ; no, so wasn't initialized
-           phi     ra
-           ldi     low lownone
-           plo     ra
-
-lowcopy:   lda     ra                  ; copy string into buffer
-           lbz     prstack
+           ldi     '*'
            str     rf
            inc     rf
-           lbr     lowcopy
- 
-lownone:   db      '****',13,10,13,10
-           db      '**** Will be displayed on next run',0
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+           lbr     prstack
 
 lowprnt:   sep     scall               ; output in hex
+           dw      f_hexout4
+
+prstack:   ldi     32                  ; follow with two spaces
+           str     rf
+           inc     rf
+           str     rf
+           inc     rf
+
+
+           ; Output stack free space
+
+           glo     rb
+           plo     rd
+           ghi     rb
+           phi     rd
+
+           sep     scall               ; output in hex
            dw      f_hexout4
 
 
            ; Output stack info
 
-prstack:   ldi     13
+           ldi     13
            str     rf
            inc     rf
 
@@ -785,7 +804,7 @@ prstack:   ldi     13
 hooklist:  dw      o_boot, o_cldboot, o_wrmboot
            db      0
            dw      0
-           db      'BOOT', 0
+           db      'Boot', 0
 
            dw      o_open, o_read, o_write, o_seek, o_close
            db      0
@@ -795,17 +814,17 @@ hooklist:  dw      o_boot, o_cldboot, o_wrmboot
            dw      o_opendir, o_delete, o_rename, o_mkdir, o_chdir, o_rmdir
            db      0
            dw      0
-           db      'DIR', 0
+           db      'Directory', 0
 
            dw      o_rdlump, o_wrlump
            db      0
            dw      0
-           db      'LUMP', 0
+           db      'Lump', 0
 
            dw      o_exec, o_execbin
            db      0
            dw      0
-           db      'EXEC', 0
+           db      'Exec', 0
 
            dw      o_type, o_msg, o_inmsg, o_setbd
            db      0
@@ -825,22 +844,22 @@ hooklist:  dw      o_boot, o_cldboot, o_wrmboot
            dw      o_prtstat, o_print
            db      0
            dw      0
-           db      'PRINT', 0
+           db      'Print', 0
 
            dw      o_getdev, o_devctrl
            db      0
            dw      0
-           db      'DEV', 0
+           db      'Device', 0
 
            dw      o_gettod, o_settod
            db      0
            dw      0
-           db      'CLOCK', 0
+           db      'Clock', 0
 
            dw      o_alloc, o_dealloc
            db      0
            dw      0
-           db      'HEAP', 0
+           db      'Heap', 0
 
            dw      o_initcall, stdcall-1, stdret-1
            db      0
@@ -855,7 +874,7 @@ stackblk:  dw      0
            dw      v_ivec-1
            db      0
            dw      0
-           db      'INT', 0
+           db      'Interrupt', 0
 
            dw      dma-1
            db      0
