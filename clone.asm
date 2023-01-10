@@ -40,9 +40,9 @@ start:      org   2000h
           ; Build information
 
             db    1+80h              ; month
-            db    9                  ; day
+            db    10                 ; day
             dw    2023               ; year
-            dw    1                  ; build
+            dw    2                  ; build
 
             db    'See github.com/dmadole/Elfos-clone for more info',0
 
