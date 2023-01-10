@@ -344,7 +344,7 @@ notbyte:    inc   rf                    ; move to next au entry
             
             sep   scall                 ; read target disk
             dw    d_ideread
-          ; lbdf  failed                ; this seems to be broken
+            lbdf  failed                ; this seems to be broken
 
           ; This is the main loop that will actually perform the data copy.
 
