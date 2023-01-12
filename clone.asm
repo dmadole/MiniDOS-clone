@@ -40,9 +40,9 @@ start:      org   2000h
           ; Build information
 
             db    1+80h              ; month
-            db    10                 ; day
+            db    12                 ; day
             dw    2023               ; year
-            dw    2                  ; build
+            dw    3                  ; build
 
             db    'See github.com/dmadole/Elfos-clone for more info',0
 
@@ -348,15 +348,7 @@ notbyte:    inc   rf                    ; move to next au entry
 
           ; This is the main loop that will actually perform the data copy.
 
-cpyloop:    ldn   rc                    ; any bits set in this bitmap byte?
-            lbnz  bitloop
-
-            glo   r7                    ; if not, skip ahead 8 sectors then
-            adi   8                     ;  right to every 8 au tests
-            plo   r7
-            lbr   chkbyte
-
-bitloop:    ldn   rc                    ; if au is not used, skip copying
+cpyloop:    ldn   rc                    ; if au is not used, skip copying
             shr
             lbnf  nocopy
 
@@ -394,9 +386,9 @@ bitloop:    ldn   rc                    ; if au is not used, skip copying
 nocopy:     inc   r7                    ; increment sector, if not eight,
             glo   r7                    ;  then loop and copy next
             ani   7
-            lbnz  bitloop
+            lbnz  cpyloop
 
-chkbyte:    glo   r7                    ; check if r7 overflowed 16 bits,
+            glo   r7                    ; check if r7 overflowed 16 bits,
             lbnz  nocarry               ;  it will wrap to zero if so
             ghi   r7
             lbnz  nocarry
