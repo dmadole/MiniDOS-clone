@@ -40,9 +40,9 @@ start:      org   2000h
           ; Build information
 
             db    1+80h              ; month
-            db    12                 ; day
+            db    17                 ; day
             dw    2023               ; year
-            dw    3                  ; build
+            dw    4                  ; build
 
             db    'See github.com/dmadole/Elfos-clone for more info',0
 
@@ -52,7 +52,41 @@ start:      org   2000h
           ; do deal with. This is important since we are working at the
           ; disk block level and not going through the operating system.
 
-main:       sep   scall                 ; send a greeting of sorts
+main:       glo   r6                    ; yes, we are going to use r6
+            stxd
+            ghi   r6
+            stxd
+
+            ghi   ra
+            phi   rf
+            glo   ra
+            plo   rf
+
+            sep   scall                 ; get source drive
+            dw    getdriv
+            lbdf  dousage
+
+            plo   r6
+
+            sep   scall                 ; get target drive
+            dw    getdriv
+            lbdf  dousage
+
+            phi   r6
+
+skipspc:    lda   rf
+            lbz   chkdisk
+            sdi   ' '
+            lbdf  skipspc
+
+dousage:    sep   scall
+            dw    o_inmsg
+            db    "USAGE: clone //source //target",13,10,0
+
+            lbr   return
+
+
+chkdisk:    sep   scall                 ; send a greeting of sorts
             dw    o_inmsg
             db    "Checking disk type... ",0
 
@@ -61,7 +95,8 @@ main:       sep   scall                 ; send a greeting of sorts
             phi   r7
             plo   r8
 
-            ldi   0e0h                  ; specif source disk
+            glo   r6                    ; specif source disk
+            ori   0e0h
             phi   r8
 
             ldi   sector.1              ; pointer to sector buffer
@@ -87,7 +122,7 @@ main:       sep   scall                 ; send a greeting of sorts
             db    "Not a type 1 filesystem.",13,10
             db    "Cannot continue.",13,10,0
 
-            sep   sret                  ; and return
+            lbr   return
 
 
           ; Confirm with user it's ok to proceed as this will destroy any
@@ -97,7 +132,35 @@ main:       sep   scall                 ; send a greeting of sorts
 type1fs:    sep   scall                 ; send warning
             dw    o_inmsg
             db    "Type 1 filesystem.",13,10
-            db    "PROCEEDING WILL OVERWRITE THE CONTENTS OF DISK 1!",0
+            db    "PROCEEDING WILL OVERWRITE THE CONTENTS OF DISK ",0
+
+            ldi   buffer.1
+            phi   rf
+            ldi   buffer.0
+            plo   rf
+
+            ldi   0
+            phi   rd
+            ghi   r6
+            plo   rd
+
+            sep   scall
+            dw    f_uintout
+
+            ldi   '!'
+            str   rf
+            inc   rf
+
+            ldi   0
+            str   rf
+
+            ldi   buffer.1
+            phi   rf
+            ldi   buffer.0
+            plo   rf
+
+            sep   scall
+            dw    o_msg
 
 yousure:    sep   scall                 ; prompt for confirmation
             dw    o_inmsg
@@ -122,7 +185,7 @@ yousure:    sep   scall                 ; prompt for confirmation
             dw    o_inmsg
             db    "^C",13,10,0
 
-            sep   sret                  ; return
+            lbr   return                ; return
 
           ; Check the input string to make sure it's exactly "YES", if
           ; it's not then send the confirmation prompt again.
@@ -227,7 +290,8 @@ scnloop:    glo   ra                    ; load a sector every 256 aus
             adci  0
             phi   r7
 
-            ldi   0e0h                  ; read from source drive
+            glo   r6                    ; specif source disk
+            ori   0e0h
             phi   r8
 
             ldi   sector.1              ; buffer to sector buffer
@@ -247,15 +311,23 @@ scnloop:    glo   ra                    ; load a sector every 256 aus
           ; Loop through each 16-bit au entry in the sector and count and
           ; mark in bitmap those that are in use.
 
-gotsect:    lda   rf                    ; if msb is not zero, it's in use
-            lbnz  inuse
+gotsect:    adi   0                     ; clear df flag in case not used
 
-            adi   0                     ; clear df flag in case not used
+            lda   rf                    ; if msb is not zero, it's in use
+            lbnz  isused
 
             ldn   rf                    ; if msb and lsb zero, not in use
             lbz   notuse
 
-inuse:      smi   0                     ; set df flag since in use
+isused:     ghi   ra                    ; fefe is a reserved value and will
+            xri   0feh                  ;  not actually be used
+            lbnz  notfefe
+
+            glo   ra                    ; skip if the au is fefe
+            xri   0feh
+            lbz   notuse
+
+notfefe:    smi   0                     ; set df flag since in use
 
             inc   r9                    ; increment used au count
 
@@ -334,7 +406,8 @@ notbyte:    inc   rf                    ; move to next au entry
           ; Read the first sector of the target disk just to make sure it's
           ; working and be sure it's initialized if needed.
 
-            ldi   0f0h                  ; select target drive
+            ghi   r6                    ; specif source disk
+            ori   0e0h
             phi   r8
 
             ldi   sector.1              ; get pointer to sector buffer
@@ -356,7 +429,8 @@ cpyloop:    ldn   rc                    ; if au is not used, skip copying
           ; the source and write to the target. This will be repeated for
           ; each of the eight sectors in this AU.
 
-            ldi   0e0h                  ; set source drive to zero
+            glo   r6                    ; specif source disk
+            ori   0e0h
             phi   r8
 
             ldi   sector.1              ; get pointer to sector buffer
@@ -368,7 +442,8 @@ cpyloop:    ldn   rc                    ; if au is not used, skip copying
             dw    d_ideread
             lbdf  failed
 
-            ldi   0f0h                  ; set target drive to one
+            ghi   r6                    ; specif source disk
+            ori   0e0h
             phi   r8
 
             ldi   sector.1              ; get pointer to sector buffer
@@ -441,7 +516,37 @@ notnext:    glo   r9                    ; if we've not copied all in-use
             db    " MB to target disk.",13,10
             db    "Copy completed successfully.",13,10,0
 
+return:     irx                         ; restore r6
+            ldxa
+            phi   r6
+            ldx
+            plo   r6
+
             sep   sret                  ; return
+
+
+getdriv:    lda   rf
+            lbz   geterr
+            sdi   ' '
+            lbdf  getdriv
+
+            adi   '/'-' '
+            lbnz  geterr
+
+            lda   rf
+            smi   '/'
+            lbnz  geterr
+
+            sep   scall
+            dw    f_atoi
+            lbdf  geterr
+
+            glo   rd
+            sep   sret
+
+geterr:     smi   0
+            sep   sret
+
 
 
          ;  If a disk error occurs along the way, output an error message
@@ -507,7 +612,7 @@ notlast:    dec   rf                    ; undo last auto-increment
             db    "h.",13,10
             db    "Copy failed.",13,10,0
 
-            sep   sret                  ; return
+            lbr   return                ; return
 
 
 buffer:    ds      10                   ; work space for number conversions
