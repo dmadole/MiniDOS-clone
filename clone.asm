@@ -39,12 +39,12 @@ start:      org   2000h
 
           ; Build information
 
-            db    1+80h              ; month
-            db    17                 ; day
-            dw    2023               ; year
-            dw    4                  ; build
+            db    11+80h             ; month
+            db    2                  ; day
+            dw    2024               ; year
+            dw    5                  ; build
 
-            db    'See github.com/dmadole/Elfos-clone for more info',0
+            db    'See github.com/dmadole/MiniDOS-clone for more info',0
 
           ; Main program
 
