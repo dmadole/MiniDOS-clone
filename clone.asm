@@ -39,10 +39,10 @@ start:      org   2000h
 
           ; Build information
 
-            db    11+80h             ; month
-            db    2                  ; day
-            dw    2024               ; year
-            dw    5                  ; build
+            db    1+80h              ; month
+            db    5                  ; day
+            dw    2026               ; year
+            dw    6                  ; build
 
             db    'See github.com/dmadole/MiniDOS-clone for more info',0
 
@@ -99,18 +99,18 @@ chkdisk:    sep   scall                 ; send a greeting of sorts
             ori   0e0h
             phi   r8
 
-            ldi   sector.1              ; pointer to sector buffer
+            ldi   buffer.1              ; pointer to copy buffer
             phi   rf
-            ldi   sector.0
+            ldi   buffer.0
             plo   rf
 
-            sep   scall                 ; get master sector to buffe
+            sep   scall                 ; get master sector to buffer
             dw    d_ideread
             lbdf  failed
 
-            ldi   (sector+104h).1       ; get pointer to filesystem type
+            ldi   (buffer+104h).1       ; get pointer to filesystem type
             phi   rf
-            ldi   (sector+104h).0
+            ldi   (buffer+104h).0
             plo   rf
 
             ldn   rf                    ; compare to 1, proceed if so
@@ -134,9 +134,9 @@ type1fs:    sep   scall                 ; send warning
             db    "Type 1 filesystem.",13,10
             db    "PROCEEDING WILL OVERWRITE THE CONTENTS OF DISK ",0
 
-            ldi   buffer.1
+            ldi   string.1
             phi   rf
-            ldi   buffer.0
+            ldi   string.0
             plo   rf
 
             ldi   0
@@ -154,9 +154,9 @@ type1fs:    sep   scall                 ; send warning
             ldi   0
             str   rf
 
-            ldi   buffer.1
+            ldi   string.1
             phi   rf
-            ldi   buffer.0
+            ldi   string.0
             plo   rf
 
             sep   scall
@@ -167,9 +167,9 @@ yousure:    sep   scall                 ; prompt for confirmation
             db    13,10
             db    "Type YES to continue or ^C to abort: ",0
 
-            ldi   buffer.1              ; buffer for input string
+            ldi   string.1              ; buffer for input string
             phi   rf
-            ldi   buffer.0
+            ldi   string.0
             plo   rf
 
             ldi   3.1                   ; only accept up to 3 bytes
@@ -190,9 +190,9 @@ yousure:    sep   scall                 ; prompt for confirmation
           ; Check the input string to make sure it's exactly "YES", if
           ; it's not then send the confirmation prompt again.
 
-proceed:    ldi   buffer.1              ; pointer to buffer
+proceed:    ldi   string.1              ; pointer to buffer
             phi   rf
-            ldi   buffer.0
+            ldi   string.0
             plo   rf
 
             lda   rf                    ; first character
@@ -219,47 +219,28 @@ proceed:    ldi   buffer.1              ; pointer to buffer
           ; Get the size of the source disk so we know how many allocation
           ; units we need to consider copying.
 
-            ldi   (sector+10bh).1       ; pointer to number of aus
+            ldi   (buffer+10bh).1       ; pointer to number of aus
             phi   rf
-            ldi   (sector+10bh).0
+            ldi   (buffer+10bh).0
             plo   rf
 
             lda   rf                    ; get numger of aus
             phi   rb
+            phi   rd
             lda   rf
             plo   rb
-
-            ldi   0                     ; divide by 256 to get megabytes
-            phi   rd
-            ghi   rb
             plo   rd
-
-            ldi   buffer.1              ; buffer for result
-            phi   rf
-            ldi   buffer.0
-            plo   rf
-
-            sep   scall                 ; convert to decimal
-            dw    f_intout
-
-            ldi   0                     ; zero terminate string
-            str   rf
 
             sep   scall                 ; start output info
             dw    o_inmsg
             db    "Source disk is ",0
 
-            ldi   buffer.1              ; pointer to previous conversion
-            phi   rf
-            ldi   buffer.0
-            plo   rf
-
             sep   scall                 ; output disk size
-            dw    o_msg
+            dw    sizeout
 
             sep   scall
             dw    o_inmsg               ; let user know we are busy
-            db    " MB, scanning... ",0
+            db    ", scanning... ",0
 
 
           ; Scan the AU allocation table in the source disk, counting how
@@ -294,18 +275,18 @@ scnloop:    glo   ra                    ; load a sector every 256 aus
             ori   0e0h
             phi   r8
 
-            ldi   sector.1              ; buffer to sector buffer
+            ldi   buffer.1              ; buffer to sector buffer
             phi   rf
-            ldi   sector.0
+            ldi   buffer.0
             plo   rf
 
             sep   scall                 ; get one sector of au map
             dw    d_ideread
             lbdf  failed
 
-            ldi   sector.1              ; reset buffer to start
+            ldi   buffer.1              ; reset buffer to start
             phi   rf
-            ldi   sector.0
+            ldi   buffer.0
             plo   rf
 
           ; Loop through each 16-bit au entry in the sector and count and
@@ -354,35 +335,18 @@ notbyte:    inc   rf                    ; move to next au entry
 
           ; Output a message with amount of data in use that we will copy.
 
-            ghi   r9                    ; divide used aus by 256
-            plo   rd
-            ldi   0
+            ghi   r9
             phi   rd
-            inc   rd
+            glo   r9
+            plo   rd
 
-            ldi   buffer.1              ; buffer to convert into
-            phi   rf
-            ldi   buffer.0
-            plo   rf
-
-            sep   scall                 ; convert size in megabytes
-            dw    f_intout
-
-            ldi   0                     ; zero terminate
-            str   rf
-
-            ldi   buffer.1              ; back to start of buffer
-            phi   rf
-            ldi   buffer.0
-            plo   rf
-
-            sep   scall                 ; output data size
-            dw    o_msg
+            sep   scall                 ; output disk size
+            dw    sizeout
 
             sep   scall                 ; finish prompt and display
             dw    o_inmsg
-            db    " MB is in use.",13,10
-            db    "Copying... ",0
+            db    " is in use.",13,10
+            db    "Copying used space... ",0
 
 
           ; Now that we know what to copy, here is where we actually do it.
@@ -410,9 +374,9 @@ notbyte:    inc   rf                    ; move to next au entry
             ori   0e0h
             phi   r8
 
-            ldi   sector.1              ; get pointer to sector buffer
+            ldi   buffer.1              ; get pointer to sector buffer
             phi   rf
-            ldi   sector.0
+            ldi   buffer.0
             plo   rf
             
             sep   scall                 ; read target disk
@@ -423,52 +387,71 @@ notbyte:    inc   rf                    ; move to next au entry
 
 cpyloop:    ldn   rc                    ; if au is not used, skip copying
             shr
-            lbnf  nocopy
+            lbdf  cloneau
+
+            glo   r7                    ; advance to next au to skip
+            adi   7
+            plo   r7
+            inc   r7
+
+            lbr   iscarry               ; check if 16-bit overflowed
+
 
           ; This is a sector of an AU that needs to be copied, so read from
           ; the source and write to the target. This will be repeated for
           ; each of the eight sectors in this AU.
 
-            glo   r6                    ; specif source disk
+cloneau:    glo   r6                    ; specif source disk
             ori   0e0h
             phi   r8
 
-            ldi   sector.1              ; get pointer to sector buffer
+            ldi   buffer.1              ; get pointer to sector buffer
             phi   rf
-            ldi   sector.0
+            ldi   buffer.0
             plo   rf
 
-            sep   scall                 ; read sector from source
+inputau:    sep   scall                 ; read sector from source
             dw    d_ideread
             lbdf  failed
+
+            inc   r7                    ; increment sector until au done
+            glo   r7
+            ani   7
+            lbnz  inputau
+
+            dec   r7                    ; set sector back to start of au
+            glo   r7
+            smi   7
+            plo   r7
 
             ghi   r6                    ; specif source disk
             ori   0e0h
             phi   r8
 
-            ldi   sector.1              ; get pointer to sector buffer
+            ldi   buffer.1              ; get pointer to sector buffer
             phi   rf
-            ldi   sector.0
+            ldi   buffer.0
             plo   rf
 
-            sep   scall                 ; write sector to target
+writeau:    sep   scall                 ; write sector to target
             dw    d_idewrite
             lbdf  failed
+
+            inc   r7                    ; increment sector until au done
+            glo   r7
+            ani   7
+            lbnz  writeau
+
 
           ; After each sector we increment the sector counter and then
           ; check for multiples of 8 (AUs) and 64 (bitmap bytes).
 
-nocopy:     inc   r7                    ; increment sector, if not eight,
-            glo   r7                    ;  then loop and copy next
-            ani   7
-            lbnz  cpyloop
-
-            glo   r7                    ; check if r7 overflowed 16 bits,
-            lbnz  nocarry               ;  it will wrap to zero if so
+iscarry:    glo   r7                    ; overflowed if wrapped to zero
+            lbnz  nocarry
             ghi   r7
             lbnz  nocarry
 
-            inc   r8                    ; if it did, then increment r8
+            inc   r8                    ; carry into r8 if so
             
           ; Each type we copy an AU, decrement the count of used AUs
           ; that we made during the scan phase. This can let us exit early
@@ -501,20 +484,7 @@ notnext:    glo   r9                    ; if we've not copied all in-use
 
             sep   scall                 ; copy is complete, we are done
             dw    o_inmsg
-            db    "copied ",0
-
-            ldi   buffer.1              ; pointer to buffer still holding
-            phi   rf                    ;  converted size of data in use
-            ldi   buffer.0
-            plo   rf
-
-            sep   scall                 ; output size
-            dw    o_msg
-
-            sep   scall                 ; copy is complete, we are done
-            dw    o_inmsg
-            db    " MB to target disk.",13,10
-            db    "Copy completed successfully.",13,10,0
+            db    "completed successfully.",13,10,0
 
 return:     irx                         ; restore r6
             ldxa
@@ -567,9 +537,9 @@ failed:     sep   scall                 ; output error message
             dw    o_inmsg
             db    " at sector ",0
 
-            ldi   buffer.1              ; pointer to buffer for sector
+            ldi   string.1              ; pointer to buffer for sector
             phi   rf
-            ldi   buffer.0
+            ldi   string.0
             plo   rf
 
             glo   r8                    ; get bits 16-23 of sector
@@ -589,9 +559,9 @@ failed:     sep   scall                 ; output error message
             ldi   0                     ; zero terminate
             str   rf
 
-            ldi   buffer.1              ; back to beginning of buffer
+            ldi   string.1              ; back to beginning of buffer
             phi   rf
-            ldi   buffer.0
+            ldi   string.0
             plo   rf
 
 skpzero:    lda   rf                    ; skip over leading zeroes
@@ -615,8 +585,87 @@ notlast:    dec   rf                    ; undo last auto-increment
             lbr   return                ; return
 
 
-buffer:    ds      10                   ; work space for number conversions
-sector:    ds      512                  ; buffer to hold each disk sector
+sizeout:    ghi   rd
+            ani   %11000000
+            bnz   sizembs
+
+            glo   rd
+            shl
+            plo   rd
+            ghi   rd
+            shlc
+            phi   rd
+
+            glo   rd
+            shl
+            plo   rd
+            ghi   rd
+            shlc
+            phi   rd
+
+            ldi   string.1              ; pointer to au space field
+            phi   rf
+            ldi   string.0
+            plo   rf
+
+            sep   scall                 ; convert au count to decimal
+            dw    f_uintout
+
+            ldi   0                     ; zero terminate
+            str   rf
+
+            ldi   string.1              ; get pointer to au space message
+            phi   rf
+            ldi   string.0
+            plo   rf
+
+            sep   scall                 ; display au stace message
+            dw    o_msg
+
+            sep   scall
+            dw    o_inmsg
+            db    ' KB',0
+
+            sep   sret
+
+
+sizembs:    glo   rd                    ; divide by 256 and round for mb
+            adi   128
+            ghi   rd
+            adci  0
+            plo   rd                    ; save 9-bit mb free in rb
+
+            ldi   0
+            shlc
+            phi   rd
+
+            ldi   string.1              ; pointer to mb size template
+            phi   rf
+            ldi   string.0
+            plo   rf
+
+            sep   scall                 ; convert to decimal string
+            dw    f_uintout
+
+            ldi   0                     ; zero terminate string
+            str   rf
+
+            ldi   string.1              ; pointer to beginning of mb free
+            phi   rf
+            ldi   string.0
+            plo   rf
+
+            sep   scall                 ; output mb free space string
+            dw    o_msg
+
+            sep   scall
+            dw    o_inmsg
+            db    ' MB',0
+
+            sep   sret
+
+string:    ds      10                   ; work space for number conversions
+buffer:    ds      4096                 ; buffer to hold each disk sector
 bitmap:    ds      8192                 ; bitmap of aus that are in use
 
 end:       ; That's all, folks!
