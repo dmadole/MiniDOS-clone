@@ -333,6 +333,21 @@ notbyte:    inc   rf                    ; move to next au entry
             lbnz  scnloop
 
 
+          ; Align the last bitmap byte if it ran short of allocation units.
+
+            lbr  chkbyte
+
+alignit:    ldn   rc
+            shr
+            str   rc
+
+            inc   ra
+
+chkbyte:    glo   ra
+            ani   7
+            lbnz  alignit
+
+
           ; Output a message with amount of data in use that we will copy.
 
             ghi   r9
@@ -383,6 +398,7 @@ notbyte:    inc   rf                    ; move to next au entry
             dw    d_ideread
             lbdf  failed                ; this seems to be broken
 
+
           ; This is the main loop that will actually perform the data copy.
 
 cpyloop:    ldn   rc                    ; if au is not used, skip copying
@@ -401,7 +417,8 @@ cpyloop:    ldn   rc                    ; if au is not used, skip copying
           ; the source and write to the target. This will be repeated for
           ; each of the eight sectors in this AU.
 
-cloneau:    glo   r6                    ; specif source disk
+cloneau:
+            glo   r6                    ; specif source disk
             ori   0e0h
             phi   r8
 
@@ -587,7 +604,7 @@ notlast:    dec   rf                    ; undo last auto-increment
 
 sizeout:    ghi   rd
             ani   %11000000
-            bnz   sizembs
+            lbnz  sizembs
 
             glo   rd
             shl
